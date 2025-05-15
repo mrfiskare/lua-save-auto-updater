@@ -1,6 +1,9 @@
 @echo off
 setlocal EnableDelayedExpansion
 
+:: ===============================
+:: Step 1 - Check for lftp
+:: ===============================
 echo Welcome to the LFTP checker script!
 echo:
 
@@ -38,9 +41,83 @@ if exist "!LFTP_EXE!" (
         echo lftp successfully extracted to !LFTP_FOLDER!\bin\lftp.exe
     ) else (
         echo ERROR: lftp.exe not found after extraction.
+        pause
+        exit /b
     )
     echo:
 )
 
-endlocal
+:: ===============================
+:: Step 2 - Ask for IP address
+:: ===============================
+:ASK_IP
+set "PS5_IP="
+set /p "PS5_IP=Enter the IP address of your PS5 (e.g. 192.168.0.123): "
+
+:: PowerShell regex pattern for IPv4 validation
+set "IPV4_REGEX=^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+
+:: Validate IP using PowerShell
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "if ('%PS5_IP%' -match '%IPV4_REGEX%') { exit 0 } else { exit 1 }"
+if errorlevel 1 (
+    echo Invalid IP address format. Please try again.
+    goto ASK_IP
+)
+
+echo IP address accepted: %PS5_IP%
+echo:
+
+:: ===============================
+:: Step 3 - Ask for FTP Port
+:: ===============================
+:ASK_FTP_PORT
+set "PS5_FTP_PORT="
+set /p "PS5_FTP_PORT=Please enter the FTP port number of your PS5 (etaHEN uses 1337 by default): "
+
+:: PowerShell regex pattern for numbers only (one or more digits)
+set "NUMBER_REGEX=^[0-9]+$"
+
+:: Validate FTP port using PowerShell
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "if ('%PS5_FTP_PORT%' -match '%NUMBER_REGEX%') { exit 0 } else { exit 1 }"
+if errorlevel 1 (
+    echo Invalid port number. Please enter only numbers.
+    goto ASK_FTP_PORT
+)
+
+echo FTP port accepted: %PS5_FTP_PORT%
+echo:
+
+:: ===============================
+:: Step 4 - Loader selection
+:: ===============================
+:ASK_LOADER
+set "CHOICE="
+echo Please select which implementation of the Lua loader you would like to use:
+echo 1. itsPLK (recommended)
+echo 2. shahrilnet
+set /p "CHOICE=Enter the number of your selection (1 or 2): "
+
+if "%CHOICE%"=="1" (
+    set "LOADER=itsPLK (recommended)"
+) else if "%CHOICE%"=="2" (
+    set "LOADER=shahrilnet"
+) else (
+    echo Invalid selection. Please enter 1 or 2.
+    echo.
+    goto ASK_LOADER
+)
+
+:: ===============================
+:: Done - Summary
+:: ===============================
+echo:
+echo Your selections:
+echo - PS5 IP: %PS5_IP%
+echo - PS5 FTP Port: %PS5_FTP_PORT%
+echo - Lua Loader: %LOADER%
+echo:
+
 pause
+endlocal
