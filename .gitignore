@@ -368,3 +368,4 @@ Temporary Items
 
 lftp
 lua_save
+ftp_temp_log.txt

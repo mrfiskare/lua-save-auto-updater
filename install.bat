@@ -2,6 +2,34 @@
 setlocal EnableDelayedExpansion
 
 :: ===============================
+:: Step 0 - Disclaimer and Backup Check
+:: ===============================
+echo IMPORTANT: This tool will help you to update the already existing Lua save files on your console. Make sure to backup everything before starting!
+echo:
+echo There is a chance that you corrupt your Lua save file and lose access to the Lua exploit. You have been warned! Use this tool at your own risk.
+echo:
+
+:BACKUP_CHECK
+set "BACKUP_CONFIRMED="
+echo I read the disclaimer and backed up my data:
+echo 1. True
+echo 2. False
+set /p "BACKUP_CONFIRMED=Enter the number of your selection: "
+
+if "%BACKUP_CONFIRMED%"=="1" (
+    echo Backup confirmed. Proceeding...
+    echo:
+) else if "%BACKUP_CONFIRMED%"=="2" (
+    echo ERROR: You must backup your data before proceeding. Exiting...
+    pause
+    exit /b
+) else (
+    echo Invalid selection. Please enter 1 or 2.
+    echo.
+    goto BACKUP_CHECK
+)
+
+:: ===============================
 :: Step 1 - Check for lftp
 :: ===============================
 echo Welcome to the LFTP checker script!
@@ -160,7 +188,8 @@ echo.
 set "FTP_LOG=ftp_temp_log.txt"
 del /f /q "%FTP_LOG%" >nul 2>&1
 
-"%LFTP_EXE%" -u anonymous,anonymous ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; ls /data; quit" >"%FTP_LOG%" 2>&1
+REM Changed username to PS5 and password to empty string
+"%LFTP_EXE%" -u PS5, ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; ls /data; quit" >"%FTP_LOG%" 2>&1
 
 :: Check if the connection was successful
 findstr /I /C:"Login failed" /C:"Fatal error" /C:"Connection refused" /C:"timed out" "%FTP_LOG%" >nul
@@ -182,7 +211,8 @@ echo.
 :: ===============================
 echo Checking and resetting /data/lua-tmp...
 
-"%LFTP_EXE%" -u anonymous,anonymous ftp://%PS5_IP%:%PS5_FTP_PORT% -e ^
+REM Changed username to PS5 and password to empty string
+"%LFTP_EXE%" -u PS5, ftp://%PS5_IP%:%PS5_FTP_PORT% -e ^
 "rm -r /data/lua-tmp; mkdir /data/lua-tmp; cd /data/lua-tmp; mput lua_save/savedata/*; quit"
 
 echo.
