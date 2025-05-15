@@ -92,6 +92,17 @@ echo:
 :: ===============================
 :: Step 4 - Loader selection
 :: ===============================
+echo Checking and resetting the 'lua_save' folder...
+if exist "lua_save" (
+    rmdir /s /q "lua_save"
+    echo Deleted the 'lua_save' folder.
+) else (
+    echo The 'lua_save' folder does not exist.
+)
+mkdir "lua_save"
+echo Created the 'lua_save' folder.
+echo:
+
 :ASK_LOADER
 set "CHOICE="
 echo Please select which implementation of the Lua loader you would like to use:
@@ -100,14 +111,33 @@ echo 2. shahrilnet
 set /p "CHOICE=Enter the number of your selection (1 or 2): "
 
 if "%CHOICE%"=="1" (
-    set "LOADER=itsPLK (recommended)"
+    echo Cloning itsPLK's loader...
+    git clone https://github.com/itsPLK/ps5_lua_loader.git lua_save
+    if exist "lua_save\savedata" (
+        set "LOADER=itsPLK"
+        echo itsPLK's loader cloned successfully into 'lua_save'.
+    ) else (
+        echo ERROR: Failed to clone itsPLK's loader. Please check your internet connection and Git installation.
+        pause
+        exit /b
+    )
 ) else if "%CHOICE%"=="2" (
-    set "LOADER=shahrilnet"
+    echo Cloning shahrilnet's loader...
+    git clone https://github.com/shahrilnet/remote_lua_loader.git lua_save
+    if exist "lua_save\savedata" (
+        set "LOADER=shahrilnet"
+        echo shahrilnet's loader cloned successfully into 'lua_save'.
+    ) else (
+        echo ERROR: Failed to clone shahrilnet's loader. Please check your internet connection and Git installation.
+        pause
+        exit /b
+    )
 ) else (
     echo Invalid selection. Please enter 1 or 2.
     echo.
     goto ASK_LOADER
 )
+echo:
 
 :: ===============================
 :: Done - Summary
