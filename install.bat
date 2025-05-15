@@ -119,5 +119,12 @@ echo - PS5 FTP Port: %PS5_FTP_PORT%
 echo - Lua Loader: %LOADER%
 echo:
 
+:: ===============================
+:: Step 5 - Connect to PS5 and list /data
+:: ===============================
+
+echo Connecting to FTP server and listing /data directory...
+"%LFTP_EXE%" -u anonymous,anonymous ftp://%PS5_IP%:%PS5_FTP_PORT% -e "ls /data; quit"
+
 pause
 endlocal
