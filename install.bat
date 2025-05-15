@@ -4,16 +4,18 @@ setlocal EnableDelayedExpansion
 :: ===============================
 :: Step 0 - Disclaimer and Backup Check
 :: ===============================
-echo IMPORTANT: This tool will help you to update the already existing Lua save files on your console. Make sure to backup everything before starting!
+echo IMPORTANT: This tool will help you to update the already existing Lua save files on your console.
+echo Make sure to backup everything before starting ^!
 echo:
-echo There is a chance that you corrupt your Lua save file and lose access to the Lua exploit. You have been warned! Use this tool at your own risk.
+echo There is a chance that you corrupt your Lua save file and lose access to the Lua exploit. 
+echo You have been warned^! Use this tool at your own risk.
 echo:
 
 :BACKUP_CHECK
 set "BACKUP_CONFIRMED="
 echo I read the disclaimer and backed up my data:
-echo 1 - True
-echo 2 - False
+echo 1. True
+echo 2. False
 set /p "BACKUP_CONFIRMED=Enter the number of your selection: "
 
 if "%BACKUP_CONFIRMED%"=="1" (
@@ -188,7 +190,7 @@ echo.
 set "FTP_LOG=ftp_temp_log.txt"
 del /f /q "%FTP_LOG%" >nul 2>&1
 
-"%LFTP_EXE%" -u PS5, ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; set net:epsv false; set net:timeout 2; set net:reconnect-interval-base 1; set net:max-retries 1; ls /data; quit" >"%FTP_LOG%" 2>&1
+"%LFTP_EXE%" -u PS5, ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; ls /data; quit" >"%FTP_LOG%" 2>&1
 
 :: Check if the connection was successful
 findstr /I /C:"Login failed" /C:"Fatal error" /C:"Connection refused" /C:"timed out" "%FTP_LOG%" >nul
@@ -220,89 +222,45 @@ echo.
 del /f /q "%FTP_LOG%" >nul 2>&1
 
 :: ===============================
-:: Step 7 - Find 'savedata...' folder in /mnt/pfs
+:: Step 7 - Monitor /mnt/pfs for savedata folder
 :: ===============================
-echo:
-echo Step 7: Searching for 'savedata...' folder in /mnt/pfs on the PS5...
-echo This step will continuously list the contents of /mnt/pfs until a folder
-echo starting with 'savedata' is found. Each attempt's listing will be displayed.
-echo:
+echo Monitoring /mnt/pfs for a 'savedata' folder...
+echo This may take a few moments. Please wait...
 
-set "PFS_LIST_OUTPUT=pfs_list_temp.txt"
-set "SAVEDATA_DIR_NAME="
-set "TARGET_SAVEDATA_PATH="
+:WAIT_FOR_SAVEDATA
+set "PFS_LOG=pfs_temp_log.txt"
+del /f /q "%PFS_LOG%" >nul 2>&1
 
-:FIND_SAVEDATA_FOLDER_LOOP
-echo Trying to list /mnt/pfs...
-del /f /q "%PFS_LIST_OUTPUT%" >nul 2>&1
-
-REM Execute lftp to list /mnt/pfs contents, outputting one item per line
-REM Stderr is redirected to stdout to capture all messages in PFS_LIST_OUTPUT
-"%LFTP_EXE%" -u PS5, ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; set net:epsv false; set net:timeout 2; set net:reconnect-interval-base 1; set net:max-retries 1; cls -1 /mnt/pfs; quit" >"%PFS_LIST_OUTPUT%" 2>&1
-
-REM Check if the lftp command itself failed (e.g., connection error, /mnt/pfs not found)
-REM Error keywords include common lftp errors and FTP status codes like 550 (file/dir not found).
-findstr /I /C:"Login failed" /C:"Fatal error" /C:"Connection refused" /C:"timed out" /C:"Server error" /C:"Access failed: 550" /C:"No such file or directory" "%PFS_LIST_OUTPUT%" >nul
-if not errorlevel 1 (
-    echo.
-    echo [ERROR] FTP command failed while trying to list /mnt/pfs. This could be a network issue,
-    echo or /mnt/pfs may not be accessible at this moment. Details:
-    type "%PFS_LIST_OUTPUT%"
-    echo.
-    echo Retrying in 5 seconds...
-    timeout /t 5 /nobreak >nul
-    goto FIND_SAVEDATA_FOLDER_LOOP
-)
+"%LFTP_EXE%" -u PS5, ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; set net:timeout 2; set net:reconnect-interval-base 1; ls /mnt/pfs; quit" >"%PFS_LOG%" 2>&1
 
 echo.
-echo --- Current contents of /mnt/pfs ---
-type "%PFS_LIST_OUTPUT%"
-echo ------------------------------------
+echo Current contents of /mnt/pfs:
+type "%PFS_LOG%"
 echo.
 
-set "FOUND_DIR=" REM Initialize/clear for the current iteration's check
-REM Search for lines beginning with "savedata", case-insensitive
-REM The for /f loop will process the output of findstr.
-REM "tokens=*" ensures the entire line is captured.
-for /f "tokens=*" %%i in ('findstr /B /I /L /C:"savedata" "%PFS_LIST_OUTPUT%"') do (
-    set "FOUND_DIR=%%i"
-    REM The first line found starting with "savedata" will be used.
-    REM Clean the found directory name (remove potential extra spaces, though cls -1 is usually clean)
-    for /f "tokens=*" %%a in ("!FOUND_DIR!") do set "FOUND_DIR=%%a"
-    goto SAVEDATA_FOLDER_IDENTIFIED
+:: Look for any line containing 'savedata'
+findstr /I "savedata" "%PFS_LOG%" >nul
+if errorlevel 1 (
+    REM No savedata folder found, wait and try again
+    timeout /t 1 >nul
+    goto WAIT_FOR_SAVEDATA
 )
 
-REM If findstr found no matching lines, FOUND_DIR will remain empty.
-echo "savedata..." folder not found in the current listing of /mnt/pfs.
-echo Please ensure the expected folder is becoming available on the PS5.
-echo Retrying in 1 second...
-timeout /t 1 /nobreak >nul
-goto FIND_SAVEDATA_FOLDER_LOOP
+:: At this point we know there's a line containing 'savedata', show it and extract the folder name
+echo Found savedata folder:
 
-:SAVEDATA_FOLDER_IDENTIFIED
-if defined FOUND_DIR (
-    set "SAVEDATA_DIR_NAME=!FOUND_DIR!"
-    set "TARGET_SAVEDATA_PATH=/mnt/pfs/!SAVEDATA_DIR_NAME!"
-    echo ======================================================================
-    echo   SUCCESS: Found 'savedata...' folder!
-    echo   Name: !SAVEDATA_DIR_NAME!
-    echo   Full Path: !TARGET_SAVEDATA_PATH!
-    echo ======================================================================
-    echo.
-) else (
-    REM This block should ideally not be reached if the loop logic is correct
-    echo [CRITICAL ERROR] Script logic error: SAVEDATA_FOLDER_IDENTIFIED reached but FOUND_DIR is not set.
-    del /f /q "%PFS_LIST_OUTPUT%" >nul 2>&1
-    pause
-    exit /b
+set "SAVEDATA_FOLDER="
+
+for /f "tokens=* delims=" %%A in ('findstr /I "savedata" "%PFS_LOG%"') do (
+    echo %%A
+    for %%B in (%%A) do set "SAVEDATA_FOLDER=%%B"
 )
 
-REM Clean up the temporary listing file
-if exist "%PFS_LIST_OUTPUT%" (
-    del /f /q "%PFS_LIST_OUTPUT%" >nul 2>&1
-)
-echo End of Step 7. The script will now proceed.
-echo:
-:: End of Step 7
+:: The last token will be the folder name
+setlocal enabledelayedexpansion
+echo Savedata folder name: !SAVEDATA_FOLDER!
+endlocal & set "SAVEDATA_FOLDER=%SAVEDATA_FOLDER%"
+echo.
+
 
 pause

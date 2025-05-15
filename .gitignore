@@ -371,3 +371,4 @@ lua_save
 ftp_temp_log.txt
 dir_list.txt
 pfs_list_temp.txt
+pfs_temp_log.txt
