@@ -190,7 +190,7 @@ echo.
 set "FTP_LOG=ftp_temp_log.txt"
 del /f /q "%FTP_LOG%" >nul 2>&1
 
-"%LFTP_EXE%" -u PS5, ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; ls /data; quit" >"%FTP_LOG%" 2>&1
+"%LFTP_EXE%" -u PS5, ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; set net:timeout 2; set net:reconnect-interval-base 1; ls /data; quit" >"%FTP_LOG%" 2>&1
 
 :: Check if the connection was successful
 findstr /I /C:"Login failed" /C:"Fatal error" /C:"Connection refused" /C:"timed out" "%FTP_LOG%" >nul
@@ -213,7 +213,7 @@ echo:
 echo Checking and resetting /data/lua-tmp...
 
 "%LFTP_EXE%" -u PS5, ftp://%PS5_IP%:%PS5_FTP_PORT% -e ^
-"rm -r /data/lua-tmp; mkdir /data/lua-tmp; cd /data/lua-tmp; mput lua_save/savedata/*; quit"
+"set ftp:passive-mode on; set net:timeout 2; set net:reconnect-interval-base 1; rm -r /data/lua-tmp; mkdir /data/lua-tmp; cd /data/lua-tmp; mput lua_save/savedata/*; quit"
 
 echo:
 echo Folder /data/lua-tmp has been reset and files uploaded.
