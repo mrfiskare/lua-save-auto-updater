@@ -262,5 +262,25 @@ echo Savedata folder name: !SAVEDATA_FOLDER!
 endlocal & set "SAVEDATA_FOLDER=%SAVEDATA_FOLDER%"
 echo.
 
+:: ===============================
+:: Step 8 - Update the lua files
+:: ===============================
+:: Create empty temp file if not exist
+if not exist test_write.tmp (
+    type nul > test_write.tmp
+)
+
+echo Checking if /mnt/pfs/%SAVEDATA_FOLDER% is writable...
+
+:check_writable
+"%LFTP_EXE%" -u PS5,ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; set net:timeout 2; set net:reconnect-interval-base 1; cd /mnt/pfs/%SAVEDATA_FOLDER%; put test_write.tmp; rm test_write.tmp; quit" >nul 2>&1
+
+if errorlevel 1 (
+    echo Folder not writable yet, retrying in 2 seconds...
+    timeout /t 2 /nobreak >nul
+    goto check_writable
+) else (
+    echo Folder is writable, proceeding with upload...
+)
 
 pause
