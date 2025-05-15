@@ -2,6 +2,7 @@
 setlocal EnableDelayedExpansion
 
 echo Welcome to the LFTP checker script!
+echo:
 
 REM Set expected lftp path
 set "LFTP_FOLDER=lftp"
@@ -29,6 +30,7 @@ if exist "!LFTP_EXE!" (
         echo Deleted ZIP file: !ZIP_NAME!
     )
 
+    echo:
     echo Download and extraction completed.
 
     REM Check again if lftp.exe is now available
@@ -37,6 +39,7 @@ if exist "!LFTP_EXE!" (
     ) else (
         echo ERROR: lftp.exe not found after extraction.
     )
+    echo:
 )
 
 endlocal
