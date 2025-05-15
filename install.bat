@@ -178,15 +178,15 @@ echo FTP connection successful!
 echo.
 
 :: ===============================
-:: Step 6 - Delete and recreate /data/lua-tmp
+:: Step 6 - Delete and recreate /data/lua-tmp and upload files
 :: ===============================
 echo Checking and resetting /data/lua-tmp...
 
 "%LFTP_EXE%" -u anonymous,anonymous ftp://%PS5_IP%:%PS5_FTP_PORT% -e ^
-"rm -r /data/lua-tmp; mkdir /data/lua-tmp; quit"
+"rm -r /data/lua-tmp; mkdir /data/lua-tmp; cd /data/lua-tmp; mput lua_save/savedata/*; quit"
 
 echo.
-echo Folder /data/lua-tmp has been reset.
+echo Folder /data/lua-tmp has been reset and files uploaded.
 echo.
 
 del /f /q "%FTP_LOG%" >nul 2>&1
