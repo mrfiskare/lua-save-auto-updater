@@ -123,8 +123,42 @@ echo:
 :: Step 5 - Connect to PS5 and list /data
 :: ===============================
 
-echo Connecting to FTP server and listing /data directory...
-"%LFTP_EXE%" -u anonymous,anonymous ftp://%PS5_IP%:%PS5_FTP_PORT% -e "ls /data; quit"
+echo Connecting to FTP server, please wait...
+echo.
+
+:: Use a temporary file to capture output and detect failure
+set "FTP_LOG=ftp_temp_log.txt"
+del /f /q "%FTP_LOG%" >nul 2>&1
+
+"%LFTP_EXE%" -u anonymous,anonymous ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; ls /data; quit" >"%FTP_LOG%" 2>&1
+
+:: Check if the connection was successful
+findstr /I /C:"Login failed" /C:"Fatal error" /C:"Connection refused" /C:"timed out" "%FTP_LOG%" >nul
+if not errorlevel 1 (
+    echo.
+    echo [ERROR] FTP connection failed. Details:
+    type "%FTP_LOG%"
+    echo.
+    pause
+    del /f /q "%FTP_LOG%" >nul 2>&1
+    exit /b
+)
+
+echo FTP connection successful!
+echo.
+
+:: ===============================
+:: Step 6 - Delete and recreate /data/lua-tmp
+:: ===============================
+echo Checking and resetting /data/lua-tmp...
+
+"%LFTP_EXE%" -u anonymous,anonymous ftp://%PS5_IP%:%PS5_FTP_PORT% -e ^
+"rm -r /data/lua-tmp; mkdir /data/lua-tmp; quit"
+
+echo.
+echo Folder /data/lua-tmp has been reset.
+echo.
+
+del /f /q "%FTP_LOG%" >nul 2>&1
 
 pause
-endlocal
