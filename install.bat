@@ -12,8 +12,8 @@ echo:
 :BACKUP_CHECK
 set "BACKUP_CONFIRMED="
 echo I read the disclaimer and backed up my data:
-echo 1. True
-echo 2. False
+echo 1 - True
+echo 2 - False
 set /p "BACKUP_CONFIRMED=Enter the number of your selection: "
 
 if "%BACKUP_CONFIRMED%"=="1" (
@@ -188,8 +188,7 @@ echo.
 set "FTP_LOG=ftp_temp_log.txt"
 del /f /q "%FTP_LOG%" >nul 2>&1
 
-REM Changed username to PS5 and password to empty string
-"%LFTP_EXE%" -u PS5, ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; ls /data; quit" >"%FTP_LOG%" 2>&1
+"%LFTP_EXE%" -u PS5, ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; set net:epsv false; set net:timeout 2; set net:reconnect-interval-base 1; set net:max-retries 1; ls /data; quit" >"%FTP_LOG%" 2>&1
 
 :: Check if the connection was successful
 findstr /I /C:"Login failed" /C:"Fatal error" /C:"Connection refused" /C:"timed out" "%FTP_LOG%" >nul
@@ -204,21 +203,106 @@ if not errorlevel 1 (
 )
 
 echo FTP connection successful!
-echo.
+echo:
 
 :: ===============================
 :: Step 6 - Delete and recreate /data/lua-tmp and upload files
 :: ===============================
 echo Checking and resetting /data/lua-tmp...
 
-REM Changed username to PS5 and password to empty string
 "%LFTP_EXE%" -u PS5, ftp://%PS5_IP%:%PS5_FTP_PORT% -e ^
 "rm -r /data/lua-tmp; mkdir /data/lua-tmp; cd /data/lua-tmp; mput lua_save/savedata/*; quit"
 
-echo.
+echo:
 echo Folder /data/lua-tmp has been reset and files uploaded.
 echo.
 
 del /f /q "%FTP_LOG%" >nul 2>&1
+
+:: ===============================
+:: Step 7 - Find 'savedata...' folder in /mnt/pfs
+:: ===============================
+echo:
+echo Step 7: Searching for 'savedata...' folder in /mnt/pfs on the PS5...
+echo This step will continuously list the contents of /mnt/pfs until a folder
+echo starting with 'savedata' is found. Each attempt's listing will be displayed.
+echo:
+
+set "PFS_LIST_OUTPUT=pfs_list_temp.txt"
+set "SAVEDATA_DIR_NAME="
+set "TARGET_SAVEDATA_PATH="
+
+:FIND_SAVEDATA_FOLDER_LOOP
+echo Trying to list /mnt/pfs...
+del /f /q "%PFS_LIST_OUTPUT%" >nul 2>&1
+
+REM Execute lftp to list /mnt/pfs contents, outputting one item per line
+REM Stderr is redirected to stdout to capture all messages in PFS_LIST_OUTPUT
+"%LFTP_EXE%" -u PS5, ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; set net:epsv false; set net:timeout 2; set net:reconnect-interval-base 1; set net:max-retries 1; cls -1 /mnt/pfs; quit" >"%PFS_LIST_OUTPUT%" 2>&1
+
+REM Check if the lftp command itself failed (e.g., connection error, /mnt/pfs not found)
+REM Error keywords include common lftp errors and FTP status codes like 550 (file/dir not found).
+findstr /I /C:"Login failed" /C:"Fatal error" /C:"Connection refused" /C:"timed out" /C:"Server error" /C:"Access failed: 550" /C:"No such file or directory" "%PFS_LIST_OUTPUT%" >nul
+if not errorlevel 1 (
+    echo.
+    echo [ERROR] FTP command failed while trying to list /mnt/pfs. This could be a network issue,
+    echo or /mnt/pfs may not be accessible at this moment. Details:
+    type "%PFS_LIST_OUTPUT%"
+    echo.
+    echo Retrying in 5 seconds...
+    timeout /t 5 /nobreak >nul
+    goto FIND_SAVEDATA_FOLDER_LOOP
+)
+
+echo.
+echo --- Current contents of /mnt/pfs ---
+type "%PFS_LIST_OUTPUT%"
+echo ------------------------------------
+echo.
+
+set "FOUND_DIR=" REM Initialize/clear for the current iteration's check
+REM Search for lines beginning with "savedata", case-insensitive
+REM The for /f loop will process the output of findstr.
+REM "tokens=*" ensures the entire line is captured.
+for /f "tokens=*" %%i in ('findstr /B /I /L /C:"savedata" "%PFS_LIST_OUTPUT%"') do (
+    set "FOUND_DIR=%%i"
+    REM The first line found starting with "savedata" will be used.
+    REM Clean the found directory name (remove potential extra spaces, though cls -1 is usually clean)
+    for /f "tokens=*" %%a in ("!FOUND_DIR!") do set "FOUND_DIR=%%a"
+    goto SAVEDATA_FOLDER_IDENTIFIED
+)
+
+REM If findstr found no matching lines, FOUND_DIR will remain empty.
+echo "savedata..." folder not found in the current listing of /mnt/pfs.
+echo Please ensure the expected folder is becoming available on the PS5.
+echo Retrying in 1 second...
+timeout /t 1 /nobreak >nul
+goto FIND_SAVEDATA_FOLDER_LOOP
+
+:SAVEDATA_FOLDER_IDENTIFIED
+if defined FOUND_DIR (
+    set "SAVEDATA_DIR_NAME=!FOUND_DIR!"
+    set "TARGET_SAVEDATA_PATH=/mnt/pfs/!SAVEDATA_DIR_NAME!"
+    echo ======================================================================
+    echo   SUCCESS: Found 'savedata...' folder!
+    echo   Name: !SAVEDATA_DIR_NAME!
+    echo   Full Path: !TARGET_SAVEDATA_PATH!
+    echo ======================================================================
+    echo.
+) else (
+    REM This block should ideally not be reached if the loop logic is correct
+    echo [CRITICAL ERROR] Script logic error: SAVEDATA_FOLDER_IDENTIFIED reached but FOUND_DIR is not set.
+    del /f /q "%PFS_LIST_OUTPUT%" >nul 2>&1
+    pause
+    exit /b
+)
+
+REM Clean up the temporary listing file
+if exist "%PFS_LIST_OUTPUT%" (
+    del /f /q "%PFS_LIST_OUTPUT%" >nul 2>&1
+)
+echo End of Step 7. The script will now proceed.
+echo:
+:: End of Step 7
 
 pause
