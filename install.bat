@@ -231,7 +231,7 @@ echo This may take a few moments. Please wait...
 set "PFS_LOG=pfs_temp_log.txt"
 del /f /q "%PFS_LOG%" >nul 2>&1
 
-"%LFTP_EXE%" -u PS5, ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; set net:timeout 2; set net:reconnect-interval-base 1; ls /mnt/pfs; quit" >"%PFS_LOG%" 2>&1
+"%LFTP_EXE%" -u PS5, ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; set net:timeout 1; set net:reconnect-interval-base 1; ls /mnt/pfs; quit" >"%PFS_LOG%" 2>&1
 
 echo.
 echo Current contents of /mnt/pfs:
@@ -242,7 +242,7 @@ echo.
 findstr /I "savedata" "%PFS_LOG%" >nul
 if errorlevel 1 (
     REM No savedata folder found, wait and try again
-    timeout /t 1 >nul
+    powershell -Command "Start-Sleep -Milliseconds 100"
     goto WAIT_FOR_SAVEDATA
 )
 
@@ -273,14 +273,15 @@ if not exist test_write.tmp (
 echo Checking if /mnt/pfs/%SAVEDATA_FOLDER% is writable...
 
 :check_writable
-"%LFTP_EXE%" -u PS5,ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; set net:timeout 2; set net:reconnect-interval-base 1; cd /mnt/pfs/%SAVEDATA_FOLDER%; put test_write.tmp; rm test_write.tmp; quit" >nul 2>&1
+"%LFTP_EXE%" -u PS5,ftp://%PS5_IP%:%PS5_FTP_PORT% -e "set ftp:passive-mode on; set net:timeout 1; set net:reconnect-interval-base 1; cd /mnt/pfs/%SAVEDATA_FOLDER%; put test_write.tmp; rm test_write.tmp; quit" >nul 2>&1
 
 if errorlevel 1 (
-    echo Folder not writable yet, retrying in 2 seconds...
-    timeout /t 2 /nobreak >nul
+    echo Folder not writable yet, retrying in 0.1 seconds...
+    powershell -Command "Start-Sleep -Milliseconds 100"
     goto check_writable
 ) else (
     echo Folder is writable, proceeding with upload...
 )
+
 
 pause
