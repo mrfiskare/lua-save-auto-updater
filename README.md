@@ -12,6 +12,8 @@ This project is currently **unfinished** and **partially working**.
 
 While most automation steps work correctly — including connecting to the PS5, navigating the filesystem, and identifying the correct save data folder — the final step of **replacing the save files** is **not yet functional**. The destination folder appears to be temporarily read-only, and reliable overwriting of the files has not been achieved at this point.
 
+The actual goal would be to move the previously uploaded lua files from the `/data/lua-tmp` folder into the `/mnt/pfs` folder without having to upload them at the time the folder becomes writable - which is impossible due to the long upload time.
+
 If you want to contribute, troubleshoot, or just experiment, feel free to fork and test things out. Any fixes or insights are welcome!
 
 
