@@ -6,6 +6,15 @@ This tool automates the process of updating the Lua save files on your jailbroke
 > This script **modifies files on your PS5's internal storage**. Misuse may result in data loss or corruption of your exploit environment. **BACK UP YOUR FILES** before using this tool.  
 > Use at your own risk.
 
+## ⚠️ Project Status
+
+This project is currently **unfinished** and **partially working**.
+
+While most automation steps work correctly — including connecting to the PS5, navigating the filesystem, and identifying the correct save data folder — the final step of **replacing the save files** is **not yet functional**. The destination folder appears to be temporarily read-only, and reliable overwriting of the files has not been achieved at this point.
+
+If you want to contribute, troubleshoot, or just experiment, feel free to fork and test things out. Any fixes or insights are welcome!
+
+
 ---
 
 ## ⚙️ Features
